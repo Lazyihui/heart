@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>to 虞佳琪</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #080810;
+    overflow: hidden;
+  }
+  canvas {
+    position: absolute;
+    top: 0; left: 0;
+  }
+  #to {
+    position: absolute;
+    bottom: 32px;
+    width: 100%;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    color: rgba(255, 140, 160, 0.75);
+    letter-spacing: 3px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="to">to 虞佳琪</div>
+
+<script>
+window.onload = function() {
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+
+  var DPR = window.devicePixelRatio || 1;
+  var W = window.innerWidth;
+  var H = window.innerHeight;
+
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  var cx = W / 2;
+  var cy = H * 0.44;
+  var SCALE = Math.min(W, H) / 46;
+
+  function hx(t) { return 16 * Math.pow(Math.sin(t), 3); }
+  function hy(t) { return -(13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)); }
+
+  function Particle() { this.init(); }
+  Particle.prototype.init = function() {
+    this.t = Math.random() * Math.PI * 2;
+    var r = 0.82 + Math.random() * 0.35;
+    this.x = cx + hx(this.t) * SCALE * r;
+    this.y = cy + hy(this.t) * SCALE * r;
+    this.size = 0.4 + Math.random() * 1.1;
+    this.baseAlpha = 0.5 + Math.random() * 0.5;
+    this.alpha = this.baseAlpha;
+    this.speed = 0.006 + Math.random() * 0.012;
+    this.drift = (Math.random() - 0.5) * 0.3;
+    this.phase = Math.random() * Math.PI * 2;
+    this.twinkle = 0.5 + Math.random() * 2;
+    var hue = 338 + Math.random() * 28;
+    var sat = 85 + Math.random() * 15;
+    var lit = 62 + Math.random() * 26;
+    this.color = 'hsl(' + hue + ',' + sat + '%,' + lit + '%)';
+    this.glowColor = 'hsla(' + hue + ',100%,80%,';
+  };
+  Particle.prototype.update = function(beat, now) {
+    var pulse = 1 + beat * 0.07;
+    var tx = cx + hx(this.t) * SCALE * pulse;
+    var ty = cy + hy(this.t) * SCALE * pulse;
+    this.x += (tx - this.x) * this.speed * (1 + beat * 3);
+    this.y += (ty - this.y) * this.speed * (1 + beat * 3);
+    this.t += 0.0015 + beat * 0.002 + this.drift * 0.001;
+    if (this.t > Math.PI * 2) this.t -= Math.PI * 2;
+    this.alpha = this.baseAlpha * (0.6 + 0.4 * Math.sin(now * this.twinkle + this.phase));
+  };
+  Particle.prototype.draw = function() {
+    var s = this.size;
+    ctx.globalAlpha = this.alpha * 0.35;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, s * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = this.glowColor + '0.15)';
+    ctx.fill();
+    ctx.globalAlpha = this.alpha;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, s, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    if (s > 0.9) {
+      ctx.globalAlpha = this.alpha * 0.9;
+      ctx.beginPath();
+      ctx.arc(this.x - s*0.25, this.y - s*0.25, s*0.35, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  function StreamParticle() { this.reset(); }
+  StreamParticle.prototype.reset = function() {
+    var t = Math.random() * Math.PI * 2;
+    this.x = cx + hx(t) * SCALE;
+    this.y = cy + hy(t) * SCALE;
+    this.vx = (Math.random() - 0.5) * 0.6;
+    this.vy = -0.5 - Math.random() * 0.9;
+    this.life = 1;
+    this.decay = 0.013 + Math.random() * 0.018;
+    this.size = 0.4 + Math.random() * 0.7;
+    this.hue = 338 + Math.random() * 30;
+  };
+  StreamParticle.prototype.update = function() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy *= 0.98;
+    this.life -= this.decay;
+  };
+  StreamParticle.prototype.draw = function() {
+    ctx.globalAlpha = this.life * 0.6;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = 'hsl(' + this.hue + ',100%,80%)';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+
+  var particles = [];
+  for (var i = 0; i < 550; i++) particles.push(new Particle());
+  var streams = [];
+  for (var j = 0; j < 55; j++) streams.push(new StreamParticle());
+
+  var beatPhase = 0;
+
+  function drawHeartGlow(beat) {
+    var steps = 300;
+    var scale = SCALE * (1 + beat * 0.055);
+    for (var layer = 3; layer >= 1; layer--) {
+      ctx.beginPath();
+      for (var i = 0; i <= steps; i++) {
+        var t = (i / steps) * Math.PI * 2;
+        var x = cx + hx(t) * scale;
+        var y = cy + hy(t) * scale;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(255,60,100,' + ((0.04 + beat * 0.06) / layer) + ')';
+      ctx.lineWidth = layer * 4;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    for (var i = 0; i <= steps; i++) {
+      var t = (i / steps) * Math.PI * 2;
+      var x = cx + hx(t) * scale;
+      var y = cy + hy(t) * scale;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,100,130,' + (0.25 + beat * 0.35) + ')';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    var grad = ctx.createRadialGradient(cx, cy - 10, 0, cx, cy, scale * 18);
+    grad.addColorStop(0, 'rgba(255,60,100,' + (0.06 + beat * 0.1) + ')');
+    grad.addColorStop(0.5, 'rgba(255,30,80,' + (0.03 + beat * 0.05) + ')');
+    grad.addColorStop(1, 'rgba(255,0,60,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  function drawECG(beat) {
+    var y0 = H - 68;
+    var x0 = 32;
+    var len = W - 64;
+    var now = Date.now() * 0.001;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    for (var i = 0; i <= len; i++) {
+      var phase = (i / len) * 6 - now * 1.4;
+      var mod = ((phase % 3) + 3) % 3;
+      var y = y0;
+      if (mod < 0.08)      y = y0 - 22 * beat;
+      else if (mod < 0.13) y = y0 + 8 * beat;
+      else if (mod < 0.2)  y = y0 - 50 * beat;
+      else if (mod < 0.28) y = y0 + 7 * beat;
+      else                 y = y0 + Math.sin(phase * 5) * 1.5;
+      ctx.lineTo(x0 + i, y);
+    }
+    ctx.strokeStyle = 'rgba(0,255,160,0.08)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,255,160,' + (0.4 + beat * 0.3) + ')';
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    ctx.font = '11px Courier New';
+    ctx.fillStyle = 'rgba(0,255,160,' + (0.28 + beat * 0.4) + ')';
+    ctx.fillText('♥ ' + (60 + Math.floor(beat * 38)) + ' bpm', W - 88, H - 50);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    var now = Date.now() * 0.001;
+    ctx.fillStyle = 'rgba(8,8,16,0.18)';
+    ctx.fillRect(0, 0, W, H);
+    beatPhase += 0.038;
+    var beat = Math.max(0, Math.sin(beatPhase) * Math.sin(beatPhase * 0.5));
+    drawHeartGlow(beat);
+    if (beat > 0.4) {
+      for (var i = 0; i < streams.length; i++) {
+        if (streams[i].life <= 0) streams[i].reset();
+        streams[i].update();
+        streams[i].draw();
+      }
+    }
+    for (var i = 0; i < particles.length; i++) {
+      particles[i].update(beat, now);
+      particles[i].draw();
+    }
+    drawECG(beat);
+  }
+
+  animate();
+};
+</script>
+</body>
+</html>
